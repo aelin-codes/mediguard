@@ -106,25 +106,29 @@
                     <td colspan="7" class="empty-row">No medicines in cabinet.</td>
                 </tr>
                 <tr th:each="m : ${medicines}"
-                    th:with="st=${m.getStatus(user.alertThresholdDays)}">
-                    <td class="med-name" th:text="${m.name}"></td>
-                    <td th:text="${m.category}"></td>
-                    <td th:text="${m.quantity}"></td>
-                    <td th:text="${m.expiryDate}"></td>
-                    <td th:text="${m.daysLeftLabel}"></td>
-                    <td>
+                    th:with="st=${m.getStatus(user.alertThresholdDays)}"
+                    class="med-row"
+                    th:classappend="${'status-border-' + st.name().toLowerCase()}">
+                    <td class="med-name" data-label="Medicine">
+                        <span class="med-title" th:text="${m.name}"></span>
+                    </td>
+                    <td data-label="Category"><span class="cat-pill" th:text="${m.category}"></span></td>
+                    <td data-label="Quantity"><span class="qty-badge" th:text="${m.quantity}"></span></td>
+                    <td data-label="Expiry Date" th:text="${m.expiryDate}"></td>
+                    <td data-label="Timeline" th:text="${m.daysLeftLabel}"></td>
+                    <td data-label="Status">
                         <span class="badge"
                               th:classappend="${'badge-' + st.name()}"
                               th:text="${st.name()}"></span>
                     </td>
-                    <td class="actions-cell">
+                    <td class="actions-cell" data-label="Actions">
                         <form th:action="@{/use}" method="post">
                             <input type="hidden" name="id" th:value="${m.id}">
-                            <button type="submit" class="btn btn-used">Mark as Used</button>
+                            <button type="submit" class="btn btn-used" th:aria-label="${'Mark ' + m.name + ' as used'}">Mark as Used</button>
                         </form>
                         <form th:action="@{/discard}" method="post">
                             <input type="hidden" name="id" th:value="${m.id}">
-                            <button type="submit" class="btn btn-discard">Discard</button>
+                            <button type="submit" class="btn btn-discard" th:aria-label="${'Discard ' + m.name}">Discard</button>
                         </form>
                     </td>
                 </tr>

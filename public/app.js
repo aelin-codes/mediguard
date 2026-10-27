@@ -240,16 +240,18 @@
 
             // Pass only UUID m.id without vulnerable inline string interpolation
             return `
-                <tr>
-                    <td class="med-name">${escapeHtml(m.name)}</td>
-                    <td>${escapeHtml(m.category || 'General')}</td>
-                    <td>${m.quantity}</td>
-                    <td>${m.expiry_date}</td>
-                    <td>${escapeHtml(timeline)}</td>
-                    <td><span class="badge badge-${status}">${status}</span></td>
-                    <td class="actions-cell">
-                        <button class="btn btn-used" data-action="use" data-id="${m.id}">Mark as Used</button>
-                        <button class="btn btn-discard" data-action="discard" data-id="${m.id}">Discard</button>
+                <tr class="med-row status-border-${status.toLowerCase()}">
+                    <td class="med-name" data-label="Medicine">
+                        <span class="med-title">${escapeHtml(m.name)}</span>
+                    </td>
+                    <td data-label="Category"><span class="cat-pill">${escapeHtml(m.category || 'General')}</span></td>
+                    <td data-label="Quantity"><span class="qty-badge">${m.quantity}</span></td>
+                    <td data-label="Expiry Date">${m.expiry_date}</td>
+                    <td data-label="Timeline"><span class="timeline-text">${escapeHtml(timeline)}</span></td>
+                    <td data-label="Status"><span class="badge badge-${status}">${status}</span></td>
+                    <td class="actions-cell" data-label="Actions">
+                        <button class="btn btn-used" data-action="use" data-id="${m.id}" aria-label="Mark ${escapeHtml(m.name)} as used">Mark as Used</button>
+                        <button class="btn btn-discard" data-action="discard" data-id="${m.id}" aria-label="Discard ${escapeHtml(m.name)}">Discard</button>
                     </td>
                 </tr>
             `;
