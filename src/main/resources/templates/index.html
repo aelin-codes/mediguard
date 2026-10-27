@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediGuard — Medicine Expiry Alert System</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+<header class="topbar">
+    <div class="container topbar-inner">
+        <div>
+            <h1>MediGuard</h1>
+            <p class="subtitle">Household Medicine Expiry Alert System</p>
+        </div>
+        <form th:action="@{/threshold}" method="post" class="threshold-form">
+            <label for="thresholdInput" th:text="${user.name + ' Warning Threshold (days):'}"></label>
+            <input id="thresholdInput" type="number" name="alertThresholdDays" min="1" max="365"
+                   th:value="${user.alertThresholdDays}" required>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+</header>
+
+<main class="container">
+    <!-- 1. Stat Cards -->
+    <section class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-label">Total Medicines</span>
+            <strong class="stat-value" th:text="${stats['total']}">0</strong>
+        </div>
+        <div class="stat-card stat-safe">
+            <span class="stat-label">Safe</span>
+            <strong class="stat-value" th:text="${stats['safe']}">0</strong>
+        </div>
+        <div class="stat-card stat-expiring">
+            <span class="stat-label">Expiring Soon</span>
+            <strong class="stat-value" th:text="${stats['expiring']}">0</strong>
+        </div>
+        <div class="stat-card stat-expired">
+            <span class="stat-label">Expired</span>
+            <strong class="stat-value" th:text="${stats['expired']}">0</strong>
+        </div>
+    </section>
+
+    <!-- 2. Alerts Section -->
+    <section class="alerts-section">
+        <div class="alert-banner alert-red" th:if="${!expiredReminders.isEmpty()}">
+            <strong>EXPIRED MEDICINES — DO NOT USE</strong>
+            <ul>
+                <li th:each="r : ${expiredReminders}" th:text="${r.message}"></li>
+            </ul>
+        </div>
+
+        <div class="alert-banner alert-amber" th:if="${!expiringReminders.isEmpty()}">
+            <strong th:text="${'NEARING EXPIRY (Within ' + user.alertThresholdDays + ' days)'}"></strong>
+            <ul>
+                <li th:each="r : ${expiringReminders}" th:text="${r.message}"></li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 3. Add Medicine Form -->
+    <section class="card">
+        <h2>Add Medicine</h2>
+        <p class="error-msg" th:if="${error}" th:text="${error}"></p>
+        <form th:action="@{/add}" method="post" class="add-form">
+            <div class="field">
+                <label>Medicine Name *</label>
+                <input type="text" name="name" placeholder="e.g. Ibuprofen 400mg" required>
+            </div>
+            <div class="field">
+                <label>Category</label>
+                <input type="text" name="category" placeholder="e.g. Painkiller">
+            </div>
+            <div class="field">
+                <label>Quantity *</label>
+                <input type="number" name="quantity" value="1" min="1" required>
+            </div>
+            <div class="field">
+                <label>Expiry Date *</label>
+                <input type="date" name="expiryDate" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Medicine</button>
+        </form>
+    </section>
+
+    <!-- 4. Medicine Table -->
+    <section class="card">
+        <h2>Household Medicine Cabinet</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Qty</th>
+                    <th>Expiry Date</th>
+                    <th>Timeline</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${medicines.isEmpty()}">
+                    <td colspan="7" class="empty-row">No medicines in cabinet.</td>
+                </tr>
+                <tr th:each="m : ${medicines}"
+                    th:with="st=${m.getStatus(user.alertThresholdDays)}">
+                    <td class="med-name" th:text="${m.name}"></td>
+                    <td th:text="${m.category}"></td>
+                    <td th:text="${m.quantity}"></td>
+                    <td th:text="${m.expiryDate}"></td>
+                    <td th:text="${m.daysLeftLabel}"></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${'badge-' + st.name()}"
+                              th:text="${st.name()}"></span>
+                    </td>
+                    <td class="actions-cell">
+                        <form th:action="@{/use}" method="post">
+                            <input type="hidden" name="id" th:value="${m.id}">
+                            <button type="submit" class="btn btn-used">Mark as Used</button>
+                        </form>
+                        <form th:action="@{/discard}" method="post">
+                            <input type="hidden" name="id" th:value="${m.id}">
+                            <button type="submit" class="btn btn-discard">Discard</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 5. History List -->
+    <section class="card">
+        <h2>Activity History</h2>
+        <ul class="history-list">
+            <li th:if="${history.isEmpty()}">No activity recorded yet.</li>
+            <li th:each="entry : ${history}" th:text="${entry}"></li>
+        </ul>
+    </section>
+</main>
+
+<footer class="footer">
+    <p>Reminder tool only. Always check the packaging.</p>
+</footer>
+</body>
+</html>
