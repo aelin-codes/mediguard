@@ -6,6 +6,11 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -18,11 +23,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-// Core service managing medicines, reminders, history log, and JSON persistence
+// Core service managing medicines, reminders, history log, and atomic JSON persistence
 @Service
 public class MedicineManager {
 
-    private static final File STORE_FILE = new File("./data/store.json");
+    private static final int MAX_HISTORY = 100;
     private static final DateTimeFormatter TS_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public static class StoreData {
@@ -31,6 +36,7 @@ public class MedicineManager {
         public List<String> history = new ArrayList<>();
     }
 
+    private final File storeFile;
     private final ObjectMapper mapper;
     private final List<Medicine> medicines = new ArrayList<>();
     private final List<Reminder> reminders = new ArrayList<>();
@@ -38,6 +44,11 @@ public class MedicineManager {
     private User user = new User("Household User", 30);
 
     public MedicineManager() {
+        this(new File("./data/store.json"));
+    }
+
+    public MedicineManager(File storeFile) {
+        this.storeFile = storeFile;
         this.mapper = new ObjectMapper()
                 .findAndRegisterModules()
                 .enable(SerializationFeature.INDENT_OUTPUT);
@@ -71,8 +82,13 @@ public class MedicineManager {
                 .filter(m -> m.getId().equals(id))
                 .findFirst()
                 .ifPresent(m -> {
-                    medicines.remove(m);
-                    logHistory("USED", m.getName());
+                    if (m.getQuantity() > 1) {
+                        m.setQuantity(m.getQuantity() - 1);
+                        logHistory("USED (1 unit, " + m.getQuantity() + " remaining)", m.getName());
+                    } else {
+                        medicines.remove(m);
+                        logHistory("CONSUMED", m.getName());
+                    }
                     save();
                 });
     }
@@ -96,7 +112,6 @@ public class MedicineManager {
     public synchronized List<Reminder> getReminders() {
         reminders.clear();
         Set<String> seen = new LinkedHashSet<>();
-        boolean historyUpdated = false;
 
         medicines.sort(Comparator.comparing(Medicine::getExpiryDate));
         for (Medicine m : medicines) {
@@ -104,13 +119,8 @@ public class MedicineManager {
             if (r != null && seen.add(r.getType() + ":" + r.getMedicineName())) {
                 reminders.add(r);
             }
-            if (m.isExpired() && history.stream().noneMatch(h -> h.contains("EXPIRED_DETECTED — " + m.getName()))) {
-                logHistory("EXPIRED_DETECTED", m.getName());
-                historyUpdated = true;
-            }
         }
-        if (historyUpdated) save();
-        return reminders;
+        return new ArrayList<>(reminders);
     }
 
     public synchronized Map<String, Integer> getStats() {
@@ -132,24 +142,32 @@ public class MedicineManager {
 
     public synchronized List<Medicine> getMedicines() {
         medicines.sort(Comparator.comparing(Medicine::getExpiryDate));
-        return medicines;
+        return new ArrayList<>(medicines);
     }
 
-    public synchronized List<String> getHistory() { return history; }
-    public synchronized User getUser() { return user; }
+    public synchronized List<String> getHistory() {
+        return new ArrayList<>(history);
+    }
+
+    public synchronized User getUser() {
+        return user;
+    }
 
     private void logHistory(String action, String medicineName) {
         history.add(0, "[" + LocalDateTime.now().format(TS_FMT) + "] " + action + " — " + medicineName);
+        while (history.size() > MAX_HISTORY) {
+            history.remove(history.size() - 1);
+        }
     }
 
     public final synchronized void load() {
-        if (!STORE_FILE.exists()) {
+        if (!storeFile.exists()) {
             seedDemoData();
             save();
             return;
         }
         try {
-            StoreData data = mapper.readValue(STORE_FILE, StoreData.class);
+            StoreData data = mapper.readValue(storeFile, StoreData.class);
             if (data.user != null) this.user = data.user;
             this.medicines.clear();
             if (data.medicines != null) this.medicines.addAll(data.medicines);
@@ -163,14 +181,25 @@ public class MedicineManager {
 
     public final synchronized void save() {
         try {
-            File parent = STORE_FILE.getParentFile();
-            if (parent != null && !parent.exists()) parent.mkdirs();
+            Path targetPath = storeFile.toPath();
+            Path parent = targetPath.getParent();
+            if (parent != null && !Files.exists(parent)) {
+                Files.createDirectories(parent);
+            }
+            Path tempFile = Files.createTempFile(parent != null ? parent : Paths.get("."), "store-", ".tmp");
             StoreData data = new StoreData();
             data.user = this.user;
             data.medicines = this.medicines;
             data.history = this.history;
-            mapper.writeValue(STORE_FILE, data);
-        } catch (IOException ignored) {}
+            mapper.writeValue(tempFile.toFile(), data);
+            try {
+                Files.move(tempFile, targetPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tempFile, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            System.err.println("Warning: failed to persist store data: " + e.getMessage());
+        }
     }
 
     private void seedDemoData() {
