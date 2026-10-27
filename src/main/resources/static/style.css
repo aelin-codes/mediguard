@@ -585,6 +585,28 @@ tbody tr:hover {
 
 /* Small Smart Phones (<= 480px) */
 @media (max-width: 480px) {
+    .threshold-form {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .threshold-form label {
+        width: 100%;
+        white-space: normal;
+        font-size: 0.8rem;
+    }
+
+    .threshold-form input {
+        font-size: 16px; /* Strictly prevents auto-zoom on iOS Safari */
+        flex: 1;
+        min-height: 38px;
+    }
+
+    .threshold-form button {
+        min-height: 38px;
+        padding: 0.4rem 1rem;
+    }
+
     .field input {
         font-size: 16px; /* Strictly prevents auto-zoom on iOS Safari */
     }
