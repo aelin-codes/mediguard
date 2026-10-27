@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MediGuard — Household Medicine Expiry Alert System with real-time Supabase tracking.">
+    <title>MediGuard — Household Medicine Expiry Alert System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="container topbar-inner">
+        <div>
+            <div class="brand-group">
+                <h1>MediGuard</h1>
+                <span id="connectionBadge" class="db-badge db-connecting">
+                    <span class="dot-status"></span> <span id="connectionStatusText">Connecting...</span>
+                </span>
+            </div>
+            <p class="subtitle">Household Medicine Expiry Alert System</p>
+        </div>
+        <form id="thresholdForm" class="threshold-form">
+            <label for="thresholdInput"><span id="userName">Household User</span> Warning Threshold (days):</label>
+            <input id="thresholdInput" type="number" name="alertThresholdDays" min="1" max="365" value="30" autocomplete="off" required>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+</header>
+
+<main class="container">
+    <div id="toastMessage" class="toast-msg" role="status" aria-live="polite"></div>
+
+    <!-- 1. Stat Cards -->
+    <section class="stats-grid" aria-label="Inventory Statistics">
+        <div class="stat-card">
+            <span class="stat-label">Total Medicines</span>
+            <strong id="statTotal" class="stat-value">0</strong>
+        </div>
+        <div class="stat-card stat-safe">
+            <span class="stat-label">Safe</span>
+            <strong id="statSafe" class="stat-value">0</strong>
+        </div>
+        <div class="stat-card stat-expiring">
+            <span class="stat-label">Expiring Soon</span>
+            <strong id="statExpiring" class="stat-value">0</strong>
+        </div>
+        <div class="stat-card stat-expired">
+            <span class="stat-label">Expired</span>
+            <strong id="statExpired" class="stat-value">0</strong>
+        </div>
+    </section>
+
+    <!-- 2. Alerts Section -->
+    <section id="alertsSection" class="alerts-section" aria-label="Active Expiry Alerts">
+        <!-- Rendered dynamically -->
+    </section>
+
+    <!-- 3. Add Medicine Form -->
+    <section class="card">
+        <h2>Add Medicine</h2>
+        <div id="addError" class="error-msg" style="display:none;" role="alert"></div>
+        <form id="addMedicineForm" class="add-form">
+            <div class="field">
+                <label for="medName">Medicine Name *</label>
+                <input id="medName" type="text" name="name" placeholder="e.g. Ibuprofen 400mg" autocomplete="off" required>
+            </div>
+            <div class="field">
+                <label for="medCategory">Category</label>
+                <input id="medCategory" type="text" name="category" placeholder="e.g. Pain Relief" autocomplete="off">
+            </div>
+            <div class="field">
+                <label for="medQuantity">Quantity *</label>
+                <input id="medQuantity" type="number" name="quantity" value="1" min="1" autocomplete="off" required>
+            </div>
+            <div class="field">
+                <label for="medExpiryDate">Expiry Date *</label>
+                <input id="medExpiryDate" type="date" name="expiryDate" autocomplete="off" required>
+            </div>
+            <button id="addSubmitBtn" type="submit" class="btn btn-primary">Add Medicine</button>
+        </form>
+    </section>
+
+    <!-- 4. Medicine Table -->
+    <section class="card">
+        <h2>Household Medicine Cabinet</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Qty</th>
+                    <th scope="col">Expiry Date</th>
+                    <th scope="col">Timeline</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="medicineTableBody">
+                <tr>
+                    <td colspan="7" class="empty-row">Connecting to Supabase...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 5. History List -->
+    <section class="card">
+        <h2>Activity History</h2>
+        <ul id="historyList" class="history-list" aria-live="polite">
+            <li>Loading activity log...</li>
+        </ul>
+    </section>
+</main>
+
+<footer class="footer">
+    <p>MediGuard · Hosted on Vercel · Powered by Supabase PostgreSQL</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
