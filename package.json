@@ -1,0 +1,9 @@
+{
+  "name": "mediguard",
+  "version": "1.0.0",
+  "description": "MediGuard — Household Medicine Expiry Alert System",
+  "main": "index.js",
+  "dependencies": {
+    "mysql2": "^3.9.7"
+  }
+}

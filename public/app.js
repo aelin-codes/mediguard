@@ -1,22 +1,6 @@
-// MediGuard Supabase Client & Reactive UI Logic
+// MediGuard MySQL API Client & Reactive UI Logic
 (function() {
     'use strict';
-
-    const SUPABASE_URL = 'https://ahfygicztfdszpxtohsg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZnlnaWN6dGZkc3pweHRvaHNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2OTIzMjIsImV4cCI6MjEwNjI2ODMyMn0.Hrw75vJgNiDLcVEu__9uZVoHi2MuqzEpeEuN7bRopKs';
-
-    // Safe client initialization without global variable shadowing
-    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-        console.error('Supabase library failed to load from CDN.');
-        const badge = document.getElementById('connectionBadge');
-        if (badge) {
-            badge.className = 'db-badge db-error';
-            badge.innerHTML = '<span class="dot-status"></span> Library Load Error';
-        }
-        return;
-    }
-
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Application State
     let medicines = [];
@@ -47,7 +31,6 @@
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        // Strip potential time/timezone component safely
         const cleanDateStr = String(expiryDateStr).split('T')[0];
         const [y, m, d] = cleanDateStr.split('-').map(Number);
         const exp = new Date(y, m - 1, d);
@@ -72,11 +55,11 @@
         return `${daysLeft} ${daysLeft === 1 ? 'day left' : 'days left'}`;
     }
 
-    function setConnectionStatus(status) {
+    function setConnectionStatus(status, label = 'MySQL Connected') {
         if (!connectionBadge) return;
         if (status === 'connected') {
             connectionBadge.className = 'db-badge db-connected';
-            connectionStatusText.textContent = 'Supabase Connected';
+            connectionStatusText.textContent = label;
         } else if (status === 'error') {
             connectionBadge.className = 'db-badge db-error';
             connectionStatusText.textContent = 'Connection Error';
@@ -103,11 +86,12 @@
         }[s]));
     }
 
-    // Data Fetchers
+    // Data Fetchers via REST API
     async function fetchAll() {
+        setConnectionStatus('connecting');
         try {
             await Promise.all([fetchSettings(), fetchMedicines(), fetchHistory()]);
-            setConnectionStatus('connected');
+            setConnectionStatus('connected', 'MySQL Connected');
             render();
         } catch (err) {
             console.error('Failed to load initial data:', err);
@@ -116,56 +100,28 @@
     }
 
     async function fetchSettings() {
-        const { data, error } = await supabaseClient
-            .from('user_settings')
-            .select('*')
-            .eq('id', 1)
-            .maybeSingle();
-
-        if (error) throw error;
-        if (data) {
+        const res = await fetch('/api/threshold');
+        if (!res.ok) throw new Error('Failed to fetch threshold settings');
+        const data = await res.json();
+        if (data && data.alert_threshold_days) {
             userSettings = data;
             thresholdInput.value = userSettings.alert_threshold_days;
-            if (userNameLabel) userNameLabel.textContent = userSettings.name;
+            if (userNameLabel) userNameLabel.textContent = userSettings.name || 'Household User';
         }
     }
 
     async function fetchMedicines() {
-        const { data, error } = await supabaseClient
-            .from('medicines')
-            .select('*')
-            .order('expiry_date', { ascending: true });
-
-        if (error) throw error;
-        if (data) {
-            medicines = data;
-        }
+        const res = await fetch('/api/medicines');
+        if (!res.ok) throw new Error('Failed to fetch medicines');
+        const json = await res.json();
+        medicines = Array.isArray(json) ? json : (json.data || []);
     }
 
     async function fetchHistory() {
-        const { data, error } = await supabaseClient
-            .from('activity_history')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(50);
-
-        if (error) throw error;
-        if (data) {
-            activityHistory = data;
-        }
-    }
-
-    // Log Activity
-    async function logActivity(action, medicineName) {
-        try {
-            await supabaseClient
-                .from('activity_history')
-                .insert([{ action, medicine_name: medicineName }]);
-            await fetchHistory();
-            renderHistory();
-        } catch (e) {
-            console.warn('Could not log activity:', e);
-        }
+        const res = await fetch('/api/history');
+        if (!res.ok) throw new Error('Failed to fetch activity history');
+        const json = await res.json();
+        activityHistory = Array.isArray(json) ? json : (json.data || []);
     }
 
     // Render Logic
@@ -238,7 +194,6 @@
             const status = getStatus(days, threshold);
             const timeline = getDaysLeftLabel(days);
 
-            // Pass only UUID m.id without vulnerable inline string interpolation
             return `
                 <tr class="med-row status-border-${status.toLowerCase()}">
                     <td class="med-name" data-label="Medicine">
@@ -271,7 +226,7 @@
         }).join('');
     }
 
-    // Event Delegation for Table Actions (Avoids inline onclick quoting/syntax errors)
+    // Event Delegation for Table Actions
     medicineTableBody.addEventListener('click', async (e) => {
         const btn = e.target.closest('button[data-action]');
         if (!btn) return;
@@ -284,37 +239,29 @@
         btn.disabled = true;
 
         if (action === 'use') {
-            if (medicine.quantity > 1) {
-                const newQty = medicine.quantity - 1;
-                const { error } = await supabaseClient
-                    .from('medicines')
-                    .update({ quantity: newQty })
-                    .eq('id', id);
+            try {
+                const res = await fetch('/api/medicines', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
 
-                if (!error) {
-                    showToast(`Used 1 unit of ${medicine.name}. ${newQty} remaining.`);
-                    await logActivity(`USED (1 unit, ${newQty} remaining)`, medicine.name);
-                    await fetchMedicines();
+                if (res.ok) {
+                    const result = await res.json();
+                    if (result.quantity > 0) {
+                        showToast(`Used 1 unit of ${medicine.name}. ${result.quantity} remaining.`);
+                    } else {
+                        showToast(`Consumed all units of ${medicine.name}.`);
+                    }
+                    await Promise.all([fetchMedicines(), fetchHistory()]);
                     render();
                 } else {
-                    showToast('Failed to update quantity', true);
+                    showToast('Failed to update medicine quantity', true);
                     btn.disabled = false;
                 }
-            } else {
-                const { error } = await supabaseClient
-                    .from('medicines')
-                    .delete()
-                    .eq('id', id);
-
-                if (!error) {
-                    showToast(`Consumed all units of ${medicine.name}.`);
-                    await logActivity('CONSUMED', medicine.name);
-                    await fetchMedicines();
-                    render();
-                } else {
-                    showToast('Failed to consume medicine', true);
-                    btn.disabled = false;
-                }
+            } catch (err) {
+                showToast('Network error updating quantity', true);
+                btn.disabled = false;
             }
         } else if (action === 'discard') {
             if (!confirm(`Are you sure you want to discard ${medicine.name}?`)) {
@@ -322,18 +269,23 @@
                 return;
             }
 
-            const { error } = await supabaseClient
-                .from('medicines')
-                .delete()
-                .eq('id', id);
+            try {
+                const res = await fetch('/api/medicines', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
 
-            if (!error) {
-                showToast(`Discarded ${medicine.name}.`);
-                await logActivity('DISCARDED', medicine.name);
-                await fetchMedicines();
-                render();
-            } else {
-                showToast('Failed to discard medicine', true);
+                if (res.ok) {
+                    showToast(`Discarded ${medicine.name}.`);
+                    await Promise.all([fetchMedicines(), fetchHistory()]);
+                    render();
+                } else {
+                    showToast('Failed to discard medicine', true);
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                showToast('Network error discarding medicine', true);
                 btn.disabled = false;
             }
         }
@@ -345,16 +297,22 @@
         const days = parseInt(thresholdInput.value, 10);
         if (isNaN(days) || days < 1) return;
 
-        const { error } = await supabaseClient
-            .from('user_settings')
-            .upsert({ id: 1, alert_threshold_days: days });
+        try {
+            const res = await fetch('/api/threshold', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ alert_threshold_days: days })
+            });
 
-        if (!error) {
-            userSettings.alert_threshold_days = days;
-            showToast(`Warning threshold updated to ${days} days.`);
-            render();
-        } else {
-            showToast('Failed to update threshold', true);
+            if (res.ok) {
+                userSettings.alert_threshold_days = days;
+                showToast(`Warning threshold updated to ${days} days.`);
+                render();
+            } else {
+                showToast('Failed to update threshold', true);
+            }
+        } catch (err) {
+            showToast('Network error updating threshold', true);
         }
     });
 
@@ -383,54 +341,43 @@
             return;
         }
 
-        // Prevent double submission
         addSubmitBtn.disabled = true;
         addSubmitBtn.textContent = 'Adding...';
 
-        const { error } = await supabaseClient
-            .from('medicines')
-            .insert([{
-                name,
-                category,
-                quantity,
-                expiry_date: expiryDate
-            }]);
+        try {
+            const res = await fetch('/api/medicines', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    category,
+                    quantity,
+                    expiry_date: expiryDate
+                })
+            });
 
-        addSubmitBtn.disabled = false;
-        addSubmitBtn.textContent = 'Add Medicine';
+            addSubmitBtn.disabled = false;
+            addSubmitBtn.textContent = 'Add Medicine';
 
-        if (!error) {
-            showToast(`Added ${name} to cabinet.`);
-            addMedicineForm.reset();
-            document.getElementById('medQuantity').value = 1;
-            await logActivity('ADDED', name);
-            const daysLeft = getDaysLeft(expiryDate);
-            if (daysLeft < 0) {
-                await logActivity('EXPIRED_DETECTED', name);
+            if (res.ok) {
+                showToast(`Added ${name} to cabinet.`);
+                addMedicineForm.reset();
+                document.getElementById('medQuantity').value = 1;
+                await Promise.all([fetchMedicines(), fetchHistory()]);
+                render();
+            } else {
+                const data = await res.json();
+                addError.textContent = 'Error: ' + (data.error || 'Failed to add medicine');
+                addError.style.display = 'block';
             }
-            await fetchMedicines();
-            render();
-        } else {
-            addError.textContent = 'Error adding medicine: ' + error.message;
+        } catch (err) {
+            addSubmitBtn.disabled = false;
+            addSubmitBtn.textContent = 'Add Medicine';
+            addError.textContent = 'Network error adding medicine';
             addError.style.display = 'block';
         }
     });
 
-    // Realtime Subscriptions
-    function setupRealtime() {
-        supabaseClient.channel('mediguard-realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'medicines' }, () => {
-                fetchMedicines().then(render);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'user_settings' }, () => {
-                fetchSettings().then(render);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_history' }, () => {
-                fetchHistory().then(renderHistory);
-            })
-            .subscribe();
-    }
-
-    // Initialize
-    fetchAll().then(setupRealtime);
+    // Initial Load
+    fetchAll();
 })();

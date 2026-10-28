@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MediGuard — Household Medicine Expiry Alert System with real-time Supabase tracking.">
+    <meta name="description" content="MediGuard — Household Medicine Expiry Alert System powered by MySQL and Vercel.">
     <title>MediGuard — Household Medicine Expiry Alert System</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
     <link rel="stylesheet" href="style.css">
-    <!-- Supabase Client Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <header class="topbar">
@@ -16,8 +14,8 @@
         <div>
             <div class="brand-group">
                 <h1>MediGuard</h1>
-                <span id="connectionBadge" class="db-badge db-connecting">
-                    <span class="dot-status"></span> <span id="connectionStatusText">Connecting...</span>
+                <span id="connectionBadge" class="db-badge db-connected">
+                    <span class="dot-status"></span> <span id="connectionStatusText">MySQL Connected</span>
                 </span>
             </div>
             <p class="subtitle">Household Medicine Expiry Alert System</p>
@@ -101,7 +99,7 @@
                 </thead>
                 <tbody id="medicineTableBody">
                 <tr>
-                    <td colspan="7" class="empty-row">Connecting to Supabase...</td>
+                    <td colspan="7" class="empty-row">Connecting to MySQL database...</td>
                 </tr>
                 </tbody>
             </table>
@@ -118,7 +116,7 @@
 </main>
 
 <footer class="footer">
-    <p>MediGuard · Hosted on Vercel · Powered by Supabase PostgreSQL</p>
+    <p>MediGuard · Hosted on Vercel · Powered by MySQL Database</p>
 </footer>
 
 <script src="app.js"></script>
