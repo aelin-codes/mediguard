@@ -7,8 +7,6 @@
 [![Vercel](https://img.shields.io/badge/Deployment-Vercel%20Production-black.svg)](https://mediguard-jade.vercel.app)
 [![Tests](https://img.shields.io/badge/Tests-20%20Passing-success.svg)]()
 [![Verdict](https://img.shields.io/badge/Verdict-PASS-brightgreen.svg)]()
-[![Presentation](https://img.shields.io/badge/Presentation-11%20Slides%20PPTX-blueviolet.svg)](MediGuard_Presentation.pptx)
-[![Report](https://img.shields.io/badge/Report-6%20Pages%20PDF-red.svg)](MediGuard_Project_Report.pdf)
 
 MediGuard is an intelligent, full-stack household medicine tracking system designed to safeguard families by monitoring medicine cabinets, calculating dynamic expiry timelines, and actively warning against using degraded or expired medications.
 
@@ -30,17 +28,6 @@ The live web application is deployed on Vercel with real-time responsive mobile 
 * **Smart Consumption**: "Mark as Used" decrements quantity by 1, automatically removing the entry once consumed.
 * **Custom Household Threshold**: Adjust alert warning days (e.g. 15, 30, 60 days) with instant live recalculation.
 * **Audit History**: Logs all medicine additions, usage, discards, and expired detections.
-
----
-
-## 📊 Presentation & Technical Report
-
-This repository includes complete presentation and report deliverables for project review, submission, and demonstration:
-
-* 📽️ **[MediGuard_Presentation.pptx](MediGuard_Presentation.pptx)** &mdash; Full 11-slide 16:9 widescreen PowerPoint deck covering problem statement, solution pillars, 4-tier expiry engine, full-stack dual architecture, CQS and atomic I/O rigor, mobile UI/UX ergonomics, 20-test verification, and Q&A wrap-up.
-* 📄 **[MediGuard_Project_Report.pdf](MediGuard_Project_Report.pdf)** &mdash; Comprehensive 6-page technical report covering system specifications, MySQL schema design, API contracts, automated testing results, and future strategic roadmap.
-* 🛠️ **[create_presentation.py](create_presentation.py)** &mdash; Python automation script using `python-pptx` to regenerate or customize the presentation deck.
-* 📑 **[generate_pdf_report.py](generate_pdf_report.py)** &mdash; Headless document compilation script generating the publication-grade PDF report.
 
 ---
 
@@ -244,10 +231,6 @@ mediguard/
 │       ├── MedicineManagerTest.java      # Service logic & persistence tests
 │       ├── MedicineTest.java             # Expiry & status calculation tests
 │       └── ReminderTest.java             # Alert generation tests
-├── MediGuard_Presentation.pptx  # 11-slide PowerPoint presentation deck
-├── MediGuard_Project_Report.pdf # 6-page comprehensive technical report
-├── create_presentation.py       # PowerPoint deck generator script
-├── generate_pdf_report.py       # PDF report compilation script
 ├── mvnw / mvnw.cmd              # Self-contained Maven wrapper scripts
 ├── pom.xml                      # Maven project configuration (Java 21 / Spring Boot 3)
 ├── schema-mysql.sql             # Root MySQL database setup script
