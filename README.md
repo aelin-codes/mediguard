@@ -1,5 +1,5 @@
 # MediGuard 💊
-> **Household Medicine Expiry Alert System**
+> **Household Medicine Expiry Alert & Inventory Management System**
 
 [![Java](https://img.shields.io/badge/Java-21%20LTS-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
@@ -7,14 +7,16 @@
 [![Vercel](https://img.shields.io/badge/Deployment-Vercel%20Production-black.svg)](https://mediguard-jade.vercel.app)
 [![Tests](https://img.shields.io/badge/Tests-20%20Passing-success.svg)]()
 [![Verdict](https://img.shields.io/badge/Verdict-PASS-brightgreen.svg)]()
+[![Presentation](https://img.shields.io/badge/Presentation-11%20Slides%20PPTX-blueviolet.svg)](MediGuard_Presentation.pptx)
+[![Report](https://img.shields.io/badge/Report-6%20Pages%20PDF-red.svg)](MediGuard_Project_Report.pdf)
 
-MediGuard is a clean, reliable household medicine management system designed to track medicine cabinets, calculate dynamic expiry timelines, and warn against using expired medications.
+MediGuard is an intelligent, full-stack household medicine tracking system designed to safeguard families by monitoring medicine cabinets, calculating dynamic expiry timelines, and actively warning against using degraded or expired medications.
 
 ---
 
 ## 🌐 Access the Website Online
 
-The live web application is deployed on Vercel with real-time responsive mobile & desktop views:
+The live web application is deployed on Vercel with real-time responsive mobile and desktop interfaces:
 
 👉 **[https://mediguard-jade.vercel.app](https://mediguard-jade.vercel.app)**
 
@@ -31,11 +33,21 @@ The live web application is deployed on Vercel with real-time responsive mobile 
 
 ---
 
+## 📊 Presentation & Technical Report
+
+This repository includes complete presentation and report deliverables for project review, submission, and demonstration:
+
+* 📽️ **[MediGuard_Presentation.pptx](MediGuard_Presentation.pptx)** &mdash; Full 11-slide 16:9 widescreen PowerPoint deck covering problem statement, solution pillars, 4-tier expiry engine, full-stack dual architecture, CQS and atomic I/O rigor, mobile UI/UX ergonomics, 20-test verification, and Q&A wrap-up.
+* 📄 **[MediGuard_Project_Report.pdf](MediGuard_Project_Report.pdf)** &mdash; Comprehensive 6-page technical report covering system specifications, MySQL schema design, API contracts, automated testing results, and future strategic roadmap.
+* 🛠️ **[create_presentation.py](create_presentation.py)** &mdash; Python automation script using `python-pptx` to regenerate or customize the presentation deck.
+* 📑 **[generate_pdf_report.py](generate_pdf_report.py)** &mdash; Headless document compilation script generating the publication-grade PDF report.
+
+---
+
 ## 💻 Running the Program Locally in VS Code or Antigravity
 
 ### Prerequisites
-* **Java Development Kit (JDK) 21 LTS** or newer.
-  * *Verification*: Run `java -version` in your terminal.
+* **Java Development Kit (JDK) 21 LTS** or newer (`java -version`).
 * **MySQL Server 8.0+** (optional for database mode; includes automatic file-based fallback).
 * **Git** installed.
 
@@ -82,7 +94,7 @@ chmod +x ./mvnw
 
 #### Method C: Executable JAR
 ```powershell
-# Package the JAR
+# Package the standalone JAR
 .\mvnw.cmd clean package
 
 # Run the packaged executable
@@ -98,31 +110,88 @@ Once the console displays `Started MediGuardApplication in ... seconds`:
 
 ---
 
-## 🗄️ Database Setup (MySQL)
+## 🗄️ Database Setup & MySQL Workbench Connection Guide
 
-MediGuard supports MySQL 8.0 for persistent storage with built-in fallback to atomic JSON persistence (`./data/store.json`).
+MediGuard supports **MySQL 8.0** for persistent enterprise storage with an automatic fallback to atomic local JSON storage (`./data/store.json`).
 
-### 1. Initialize MySQL Database
-Run the provided MySQL schema and seed data script:
+### Step 1: Ensure MySQL Server is Running
+On Windows, MySQL Server runs as a service named `MySQL80` on port `3306`:
+
+**Check service status:**
+```powershell
+Get-Service MySQL80
+```
+
+**Start the service if stopped:**
+```powershell
+net start MySQL80
+```
+
+---
+
+### Step 2: Connect via MySQL Workbench (GUI)
+
+1. **Launch MySQL Workbench**:
+   * Open **MySQL Workbench** from your Start menu or desktop shortcut.
+2. **Create New Connection**:
+   * On the home screen, click the **`+`** icon next to **MySQL Connections**.
+   * Configure the connection parameters:
+     * **Connection Name:** `MediGuard Local (MySQL80)`
+     * **Connection Method:** `Standard (TCP/IP)`
+     * **Hostname:** `127.0.0.1` (or `localhost`)
+     * **Port:** `3306`
+     * **Username:** `root`
+     * **Password:** Click **Store in Vault...** and enter your MySQL root password.
+     * **Default Schema:** `mediguard`
+3. **Test the Connection**:
+   * Click **Test Connection** in the bottom-right corner.
+   * A dialog will confirm: ✅ **"Successfully made the MySQL connection"**.
+   * Click **OK** to save the connection tile.
+4. **Execute Database Initialization Script**:
+   * Click on the newly created connection tile to open the SQL query editor.
+   * In the top menu, go to **File > Open SQL Script...** (or press `Ctrl + Shift + O`).
+   * Select [`schema-mysql.sql`](schema-mysql.sql) from the `mediguard` project directory.
+   * Click the yellow **Execute (⚡)** lightning bolt icon on the toolbar to run the script.
+   * In the left **Schemas** sidebar, right-click and click **Refresh All**. You will see the `mediguard` database with three populated tables:
+     * `medicines` &mdash; Pre-seeded with 15 standard household medications.
+     * `user_settings` &mdash; Household notification profile and expiry threshold.
+     * `activity_history` &mdash; Audit trail of all additions, consumptions, and discards.
+
+---
+
+### Step 3: Connect via MySQL Command-Line Client (CLI)
+
+Alternatively, you can initialize the database directly from your command line:
 
 ```powershell
+# Run the schema creation and seed script
 mysql -u root -p < schema-mysql.sql
 ```
 
-This creates the `mediguard` database with indexed tables:
-* `medicines` — Medicine items with UUIDs, categories, quantities, and dates.
-* `user_settings` — Household profile and warning threshold.
-* `activity_history` — Audit trail of all cabinet activities.
+Or connect interactively:
+```powershell
+mysql -u root -p
+mysql> source schema-mysql.sql;
+mysql> SHOW TABLES IN mediguard;
+mysql> SELECT name, category, quantity, expiry_date FROM mediguard.medicines;
+```
 
-### 2. Configure Database Credentials
-Edit `src/main/resources/application.properties` or set environment variables:
+---
+
+### Step 4: Configure MediGuard (Spring Boot) Credentials
+
+Open [`src/main/resources/application.properties`](src/main/resources/application.properties) and enter your MySQL root password:
+
 ```properties
 # MySQL Connection
 spring.datasource.url=jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:mediguard}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 spring.datasource.username=${MYSQL_USER:root}
-spring.datasource.password=${MYSQL_PASSWORD:}
+spring.datasource.password=${MYSQL_PASSWORD:YOUR_ROOT_PASSWORD}
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 ```
+
+> **Automatic Fallback Guarantee:**  
+> If MySQL credentials are left blank or the MySQL service is unreachable, MediGuard automatically falls back to atomic local JSON persistence at `./data/store.json`. No crashes, zero data loss.
 
 ---
 
@@ -175,6 +244,10 @@ mediguard/
 │       ├── MedicineManagerTest.java      # Service logic & persistence tests
 │       ├── MedicineTest.java             # Expiry & status calculation tests
 │       └── ReminderTest.java             # Alert generation tests
+├── MediGuard_Presentation.pptx  # 11-slide PowerPoint presentation deck
+├── MediGuard_Project_Report.pdf # 6-page comprehensive technical report
+├── create_presentation.py       # PowerPoint deck generator script
+├── generate_pdf_report.py       # PDF report compilation script
 ├── mvnw / mvnw.cmd              # Self-contained Maven wrapper scripts
 ├── pom.xml                      # Maven project configuration (Java 21 / Spring Boot 3)
 ├── schema-mysql.sql             # Root MySQL database setup script
